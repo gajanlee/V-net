@@ -33,19 +33,19 @@ class V_NET(object):
              self.char_embeddings,
              scope = "question_embedding",)
         
-        self.passage_encoding = tf.concat((self.passage_word_encoded, self.passage_char_encoded))
-        self.question_encoding = tf.concat((self.question_word_encoded, self.question_char_encoded))
+        self.passage_encoded = tf.concat((self.passage_word_encoded, self.passage_char_encoded))
+        self.question_encoded = tf.concat((self.question_word_encoded, self.question_char_encoded))
         
         # u_t_Q = BiLSTM_Q(utQ, [etQ, ctQ])
         self.passage_encoding = bidirectional_RNN(
-            self.passage_encoding,
+            self.passage_encoded,
             self.passage_word_len,
             layers = Params.num_layers,
             scope = "passage_encoding",
             is_training = self.is_training)
         
         self.question_encoding = bidirectional_RNN(
-            self.question_encoding,
+            self.question_encoded,
             self.question_word_len,
             layers = Params.num_layers,
             scope = "question_encoding",
@@ -89,4 +89,28 @@ class V_NET(object):
     
     def content_loss(self):
         with tf.variable_scope("content_loss"):
-            
+            # self.word_indices_prob = tf.one_hot(self.word_indices, tf.shape(self.passage_words)[1])
+
+            # the words within the answer spans will be labeled as 1 and others' 0
+            self.words_prob = tf.reduce_max(tf.one_hot(self.words_indices, 10), 1)  # how to implement ([[1, 4]]) => ([[0, 1, 1, 1, 1, 0, 0, ...]])            
+
+            self.content_prob = tf.nn.sigmoid(vars["w_1_c"] * tf.nn.relu(vars["w_2_c"]*self.point_logits))
+            self.content_loss = -tf.reduce_mean(tf.reduce_mean(tf.reduce_sum(self.words_prob * tf.log(self.content_prob + 1e-8), 2), 1))
+        
+        self.answer_encoding = tf.reduce_mean(self.content_prob * self.passage_encoded, 2)
+
+    def cross_passage_verfication(self):
+        
+        # generate the score matrix, mask the dialog value to zeros.
+        mask = tf.cast(tf.logical_not(tf.cast(tf.matrix_diag([1] * Params.max_passage_len), tf.bool)), tf.float32)
+        scores = tf.multiply(tf.transpose(self.answer_encoding), self.answer_encoding), mask)   # Warning: Judge if the answer_encoding from the same passage? 
+        
+        self._answer_encoding = tf.matmul(self.answer_encoding, tf.nn.softmax(scores))
+        tf.contrib.full_connected_layers(tf.concat(self.answer_encoding, self._answer_encoding, self.answer_encoding * self._answer_encoding))
+
+        tf.nn.softmax()
+
+        with tf.variable("verfication_loss"):
+            pass
+
+        self.loss = self.boundary_loss + Params.beta1 * self.content_loss + Params.beta2 * self.verfication_loss
