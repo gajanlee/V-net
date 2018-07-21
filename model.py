@@ -1,4 +1,5 @@
 import tensorflow as tf
+from layers import PointerNetDecoder
 
 class V_NET(object):
     def __init__(self, is_training=True, word_emb=None, char_emb=None):
@@ -72,11 +73,11 @@ class V_NET(object):
         """
         # pointer_net()
         with tf.variable_scope("pointer_network"):
-            vars[""]
+            decoder = PointerNetDecoder(Params.hidden_size)
+            self.point_logits = decoder.decode(self.passage_encoding, self.question_encoding, self.passage_len)
 
-            U = 
-        batch_size = tf.shape(self.indices)[0]
-        concat_passage_encoding = tf.reshape(self.passage_encoding, [batch_size, -1, 2*Params.attn_size])
+            # cell = tf.nn.dropout(tf.contrib.rnn.GRUcell(Params.attn_size * 2), Params.dropout_keep_prob)
+            
 
         
     def boundary_loss(self):
@@ -101,16 +102,17 @@ class V_NET(object):
 
     def cross_passage_verfication(self):
         
-        # generate the score matrix, mask the dialog value to zeros.
-        mask = tf.cast(tf.logical_not(tf.cast(tf.matrix_diag([1] * Params.max_passage_len), tf.bool)), tf.float32)
-        scores = tf.multiply(tf.transpose(self.answer_encoding), self.answer_encoding), mask)   # Warning: Judge if the answer_encoding from the same passage? 
-        
-        self._answer_encoding = tf.matmul(self.answer_encoding, tf.nn.softmax(scores))
-        tf.contrib.full_connected_layers(tf.concat(self.answer_encoding, self._answer_encoding, self.answer_encoding * self._answer_encoding))
-
-        tf.nn.softmax()
-
         with tf.variable("verfication_loss"):
-            pass
+            # generate the score matrix, mask the dialog value to zeros.
+            mask = tf.cast(tf.logical_not(tf.cast(tf.matrix_diag([1] * Params.max_passage_len), tf.bool)), tf.float32)
+            scores = tf.multiply(tf.transpose(self.answer_encoding), self.answer_encoding), mask)   # Warning: Judge if the answer_encoding from the same passage? 
+            
+            self._answer_encoding = tf.matmul(self.answer_encoding, tf.nn.softmax(scores))
+            g_v = tf.contrib.full_connected_layers(tf.concat([self.answer_encoding, self._answer_encoding, self.answer_encoding * self._answer_encoding], 2))
 
+            p_v = tf.nn.softmax(g_v)
+            self.cross_passage_verfication = -tf.reduce_mean(tf.log(p_v + 1e-8)*mask, 1)  # y_i is the index of the correct answer
+        
         self.loss = self.boundary_loss + Params.beta1 * self.content_loss + Params.beta2 * self.verfication_loss
+    
+    

@@ -23,3 +23,4 @@ with open(outfile, "w") as f, tqdm(total=df.size) as pbar:
             "well_formed_answers": nltk.word_tokenize(row[1]["wellFormedAnswers"][0]),
         }
         f.write(json.dumps(js) + "\n")
+
