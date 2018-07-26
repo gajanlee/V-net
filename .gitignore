@@ -1,5 +1,8 @@
 # dataset json files
 *.json  
+# glove embeddings
+glove.*.txt   
+*.pickle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
