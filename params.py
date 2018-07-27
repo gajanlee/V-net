@@ -1,4 +1,5 @@
 class Params:
+    # If pickle file has been generated, glove is not neccessary.
     glove_word = "glove.840B.300d.txt"
     vocab_size = 91605
     word_emb_size = 300
