@@ -21,7 +21,6 @@ class V_NET(object):
 
 
             self.encode_ids()
-            self.params = get_attn_params(Params.attn_size, initializer = tf.)
 
             self.build_matching()
             self.decode()
@@ -37,13 +36,13 @@ class V_NET(object):
             log_total_params()
 
     def encode_ids(self):
-         self.passage_word_encoded, self.passage_char_encoded = encoding(
+        self.passage_word_encoded, self.passage_char_encoded = encoding(
              self.passage_words,
              self.passage_chars,
              self.word_embeddings,
              self.char_embeddings,
              scope = "passage_embedding",)
-         self.question_word_encoded, self.question_char_encoded = encoding(
+        self.question_word_encoded, self.question_char_encoded = encoding(
              self.question_words,
              self.question_chars,
              self.word_embeddings,
@@ -159,7 +158,12 @@ def main(_):
                         sv.saver.save(sess, Params.logdir + "/model_epoch_%d_step_%d" % (gs/model.num_batch, gs%model.num_batch))
 
                         # Compute the evaluation scores
+                        sample = np.random.choice(dev_ind, Params.batch_size)
+                        feed_dict = {data}
+                        index, dev_loss = sess.run([model.output_index, model.loss], feed_dict=feed_dict)
 
+                        Rouge_L, Bleu_4 = 
+                        sess.run()
 
 if __name__ == "__main__"
     tf.app.run()

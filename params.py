@@ -8,6 +8,15 @@ class Params:
     char_emb_size = 300
     emb_pickle = "embeddings.pickle"
 
+    # data directory
+    train_path = "train.json"
+    dev_path = "dev.json"
+    test_path = "test.json"
+
+    # mode settings
+    mode = "train"
+    batch_size = {"train": 50, "test": 100}[mode]
+    is_training = True if mode == "train" else False
     
     
 

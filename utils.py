@@ -19,6 +19,7 @@ def get_fake_answer_json(text, ref_answer):
     return {
         "document": tokened_text,
         "answer_spans": spans,
+        # answer_spans doesn't include the upper boundary.
         "fake_answers": tokened_text[spans[0]: spans[1]+1]
     }
 

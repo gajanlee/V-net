@@ -1,18 +1,22 @@
-import logging
-import os
+import json, logging, os
 import numpy as np
 import pickle
 from tqdm import tqdm
 from params import Params
 
+"""
+    Embedding loader, store data into pickle file.
+"""
 class Embedding:
+    # unknow parameters, its id must be 0
+    UNKNOWN, UNKNOWN_ID = "<unk>", 0
     def __init__(self):
-        self._word2index = {"<unk>": 0}
-        self._index2word = ["<unk>"]
+        self._word2index = {self.UNKNOWN: self.UNKNOWN_ID}
+        self._index2word = [self.UNKNOWN]
         self._word_emb = None
 
-        self._char2index = {"<unk>": 0}
-        self._index2char = ["unk"]
+        self._char2index = {self.UNKNOWN: UNKNOWN_ID}
+        self._index2char = [self.UNKNOWN]
         self._char_emb = None
     
     def build(self):
@@ -35,7 +39,22 @@ class Embedding:
                 #_embs = np.concatenate((_embs, [list(map(float, _d[1:]))]))
         setattr(self, emb, _embs)
 
-def load_embeddings():
+    # Return word/char's id, it supports batch query
+    def _get_id(self, query, store):
+        if type(query) is str:
+            return store[query] if query in store else self.UNKNOWN_ID
+        elif type(query) is list:
+            return [self._get_id(q, store) for q in query]
+
+    def get_word_id(self, query):
+        return self._get_id(query, self._word2index)
+    
+    def get_char_id(self, query):
+        return self._get_id(query, self._char2index)
+
+# private 
+__emb = None
+def _load_embeddings():
     if os.path.exists(Params.emb_pickle):
         with open(Params.emb_pickle, "rb") as _embf:
             emb = pickle.load(_embf)
@@ -45,4 +64,72 @@ def load_embeddings():
         with open(Params.emb_pickle, "wb") as _embf:
             pickle.dump(emb, _embf)
     return emb
+
+# Lazy init the embedding vocabulary instance,
+def load_embeddings():
+    if __emb is None:
+        __emb = _load_embeddings()
+    return __emb
+
+
+def padding_word():
+    pass
+
+def padding_char():
+    pass
+
+# Every preprocessed json is a corpus data instance
+# But, we should decode it into a class to adapt tensorflow batch. 
+class CorpusData:
+    def __init__(self, passage, question):
+        _dict = load_embeddings()
+        passage_word_ids = padding_word(_dict.get_word_id(document))
+        question_word_ids = padding_word(_dict.get_word_id(question))
+        
+        passage_char_ids = padding_char([_dict.get_char_id(list(pw)) for pw in passage])
+        question_char_ids = padding_char([_dict.get_char_id(list(qw)) for qw in question])
+
+        self.datas, self.shapes = None, None
+"""
+    Tensorflow Queue, it can generate batch data.
+"""
+def get_batch(mode="train"):
+    assert getattr(Params, mode + "_path") is not None
+    
+    data, shapes = load_data(getattr(Params, mode + "_path"))
+
+    batch = tf.train.batch(data, shapes=shapes, num_threads=2, 
+                    batch_size=Params.batch_size, capacity=Params.batch_size*32, dynamic_pad=True)
+
+    return batch, data // Params.batch_size
+
+
+def load_data(path):
+    _dict = load_embeddings()
+
+    passage_word_ids, question_word_ids = [], []
+    passage_char_ids, question_char_ids = [], []
+    passage_word_len, question_word_len = [], []
+    passage_char_len, question_char_len = [], []
+    indices = []
+
+    with open(path, "rb") as fp:
+        for i, line in enumerate(fp):
+            _data = json.loads(line)
+
+            for _doc in _data["documents"]:
+                words, spans, answers = 
+                
+                passage_word_ids.append(padding_word(_doc["document"]))
+                question_word_ids.append(padding_word(_data["query"]))
+                passage_char_ids.append(padding_char(_doc["document"]))
+                question_char_ids.append(padding_char(_data["query"]))
+                
+                passage_word_len.append(len(_doc["document"]))
+                question_word_len.append(len(_data["query"]))
+
+                
+                , question_word_ids
+
+                _doc["document"], _doc["answer_spans"], _doc["fake_answers"]
 
