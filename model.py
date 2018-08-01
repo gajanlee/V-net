@@ -147,9 +147,11 @@ def main(_):
         sv = tf.train.Supervisor(logdir=Params.logdir, save_model_secs=0, global_step=model.global_step, init_op=tf.global_variables_initializer())
 
         with sv.managed_session(config=config) as sess:
-            
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess, coord)
+
             for epoch in range(1, Params.num_epochs+1):
-                if sv.should_stop(): break
+                if sv.should_stop() or coord.should_stop(): break
                 for step in tqdm(range(model.num_batch), total=model.num_batch, ncols=70, leave=False, unit='b'):
                     sess.run(model.train_op)
 
@@ -165,5 +167,7 @@ def main(_):
                         Rouge_L, Bleu_4 = 
                         sess.run()
 
+            coord.join(threads)
+            
 if __name__ == "__main__"
     tf.app.run()

@@ -9,11 +9,16 @@ class Params:
     emb_pickle = "embeddings.pickle"
 
     # data directory
-    train_path = "train.json"
+    train_path = "dev.json"
     dev_path = "dev.json"
     test_path = "test.json"
 
-    # mode settings
+    # data content settings
+    max_passage_len = 300
+    max_question_len = 30
+    max_word_len = 8    # every word's max char count
+
+    # model settings
     mode = "train"
     batch_size = {"train": 50, "test": 100}[mode]
     is_training = True if mode == "train" else False
