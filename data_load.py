@@ -144,6 +144,7 @@ def load_data(path):
 
     with open(path, "rb") as fp:
         for i, line in enumerate(fp):
+            if i == 1000: break
             _data = json.loads(line)
             _dict = load_embeddings()
 

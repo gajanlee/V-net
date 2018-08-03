@@ -1,7 +1,14 @@
 import tensorflow as tf
-
 from tensorflow.contrib.rnn import MultiRNNCell, RNNCell
-from tensorflow.nn.rnn_cell import DropoutWrapper
+# from tensorflow.nn.rnn_cell import DropoutWrapper
+DropoutWrapper = tf.nn.rnn_cell.DropoutWrapper
+from params import Params
+
+def encoding(words, chars, word_embs, char_embs, scope="emb_encoding"):
+    with tf.variable_scope(scope):
+        word_encoding = tf.nn.embedding_lookup(word_embs, words)
+        char_encoding = tf.nn.embedding_lookup(char_embs, chars)
+        return word_encoding, tf.reshape(char_encoding, (words.shape[0], words.shape[1], -1))
 
 def get_attn_params(attn_size, initializer = tf.truncated_normal_initializer):
     pass
@@ -9,11 +16,11 @@ def get_attn_params(attn_size, initializer = tf.truncated_normal_initializer):
 def get_rnn_cell(cell_fn, hidden_size, is_training=True):
     # When testing, we should not dropout the rnn cell
     if is_training:
-        return DropoutWrapper(cell_fn(hidden_size), output_keep_prob=1-Params.dropout, dtype=tf.flot32)
+        return DropoutWrapper(cell_fn(hidden_size), output_keep_prob=1-Params.dropout, dtype=tf.float32)
     else:
         return cell_fn(hidden_size)
 
-def bidirectional_RNN(inputs, inputs_len, cell_fn=tf.contrib.rnn.GRUcell, units=Params.attn_size, layers=1, scope="Bidirectional_RNN", is_training=True):
+def bidirectional_RNN(inputs, inputs_len, cell_fn=tf.contrib.rnn.GRUCell, units=Params.attn_size, layers=1, scope="Bidirectional_RNN", is_training=True):
     with tf.variable_scope(scope):
 
         if layers > 1:

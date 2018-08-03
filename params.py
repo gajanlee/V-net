@@ -20,10 +20,18 @@ class Params:
 
     # model settings
     mode = "train"
+    is_training = True if mode == "train" else False    # decide if build loss graph
     batch_size = {"train": 50, "test": 100}[mode]
-    is_training = True if mode == "train" else False
     
+    num_layers = 2
+    dropout = 0.1
+    attn_size = 75
     
+    beta1 = 0.5
+    beta2 = 0.5
 
+    logdir = "./model_check"
+    num_epochs = 10
+    save_steps = 50
     
     
