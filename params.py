@@ -14,7 +14,7 @@ class Params:
     test_path = "test.json"
 
     # data content settings
-    max_passage_len = 300
+    max_passage_len = 270
     max_question_len = 30
     max_word_len = 8    # every word's max char count
 

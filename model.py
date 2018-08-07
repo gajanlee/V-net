@@ -93,9 +93,11 @@ class V_NET(object):
         """
         # pointer_net()
         with tf.variable_scope("pointer_network"):
-            decoder = PointerNetDecoder(Params.attn_size)
-            self.point_logits = decoder.decode(self.passage_encoding, self.question_encoding, self.passage_word_len)
-
+            from pointer_net import PointerNetDecoder2
+            decoder = PointerNetDecoder2(2*Params.attn_size)     # bidirectional RNN, so it multipy by 2
+            self.point_logits = decoder.decode(self.passage_encoding, self.question_encoding)
+            # convert point_logits to one matrix
+            
             # cell = tf.nn.dropout(tf.contrib.rnn.GRUcell(Params.attn_size * 2), Params.dropout_keep_prob)
             
 
