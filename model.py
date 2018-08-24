@@ -24,7 +24,7 @@ class V_NET(object):
             self.passage_chars, self.question_chars,
             self.passage_word_len, self.question_word_len,
             self.passage_char_len, self.question_char_len,
-            self.indices, ) = self.data
+            self.indices, self.words_indices) = self.data
 
             self.passage_word_len = tf.squeeze(self.passage_word_len, -1)
             self.question_word_len = tf.squeeze(self.question_word_len, -1)

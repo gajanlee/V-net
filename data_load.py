@@ -140,7 +140,7 @@ def load_data(path):
     passage_char_ids, question_char_ids = [], []
     passage_word_len, question_word_len = [], []
     passage_char_len, question_char_len = [], []
-    indices = []
+    indices, word_indices = [], []
 
     with open(path, "rb") as fp:
         for i, line in enumerate(fp):
@@ -165,15 +165,16 @@ def load_data(path):
                 question_char_len.append( padding_char_len(question, Params.max_question_len))
 
                 indices.append([_doc["answer_spans"][0], _doc["answer_spans"][1]+1])
+                word_indices.append([1 if _doc["answer_spans"][0]<=i<=_doc["answer_spans"][1] else 1 for i in range(Params.max_passage_len)])
         
     shapes = [(Params.max_passage_len,), (Params.max_question_len, ),
             (Params.max_passage_len, Params.max_word_len, ), (Params.max_question_len, Params.max_word_len, ),
             (1, ), (1, ),
             (Params.max_passage_len, ), (Params.max_question_len, ),
-            (2, )]
+            (2, ), (Params.max_passage_len, )]
     
     return ([np.array(passage_word_ids), np.array(question_word_ids),
             np.array(passage_char_ids), np.array(question_char_ids),
             np.array(passage_word_len), np.array(question_word_len),
-            np.array(passage_char_len), np.array(question_char_len), np.array(indices)],
+            np.array(passage_char_len), np.array(question_char_len), np.array(indices), np.array(word_indices)],
             shapes)
