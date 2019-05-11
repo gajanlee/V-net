@@ -99,7 +99,6 @@ class V_NET(object):
             # convert point_logits to one matrix
             
             # cell = tf.nn.dropout(tf.contrib.rnn.GRUcell(Params.attn_size * 2), Params.dropout_keep_prob)
-            
 
         
     def build_boundary_loss(self):
@@ -145,6 +144,7 @@ class V_NET(object):
 
 
 def main(_):
+
     _dict = load_embeddings()    
     model = V_NET(_dict._word_emb, _dict._char_emb)
 

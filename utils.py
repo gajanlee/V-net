@@ -23,6 +23,9 @@ def get_fake_answer_json(text, ref_answer):
         "fake_answers": tokened_text[spans[0]: spans[1]+1]
     }
 
+def recall_score(text, truth):
+    return len(set(text) & set(truth)) / len(set(truth))
+
 def _get_answer_spans(text, ref_answer):
     """
     Based on Rouge-L Score to get the best answer spans.
@@ -36,10 +39,13 @@ def _get_answer_spans(text, ref_answer):
     for start, _token in enumerate(text):
         if _token not in ref_answer: continue
         for end in range(len(text)-1, start-1, -1):
-            _score = rouge_score(text[start: end+1], ref_answer)
+            scorer = recall_score # rouge_score, rouge score is too slow
+            _score = scorer(text[start: end+1], ref_answer)
             if _score > max_score: 
                 max_score = _score
                 max_spans = [start, end]
-
+            if max_score > 0.9:
+                return max_spans
+            
     # Warning: the end pointed character is inclueded in fake answer
     return max_spans

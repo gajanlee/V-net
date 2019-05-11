@@ -27,7 +27,7 @@ class Embedding:
     def _build(self, glove_path, _data2index, _index2data, emb, vocab_size, emb_size):
         _embs = np.zeros((vocab_size, emb_size))
         print(emb)        
-        with open(glove_path) as dataf, tqdm(total=vocab_size-1) as pbar:
+        with open(glove_path, encoding="utf-8") as dataf, tqdm(total=vocab_size-1) as pbar:
             for i, line in enumerate(dataf, 1):
                 pbar.update(1)
                 if i == vocab_size: break
@@ -124,7 +124,8 @@ def padding_char_len(data, max_len):
 def get_batch(mode="train"):
     assert getattr(Params, mode + "_path") is not None
     
-    data, shapes = load_data(getattr(Params, mode + "_path"))
+    #data, shapes = load_data(getattr(Params, mode + "_path"))
+    data, shapes = load_data("dev_v2.1.json")
     
     input_queue = tf.train.slice_input_producer(data, shuffle=False)
     batch = tf.train.batch(input_queue, shapes=shapes, num_threads=2, 
@@ -142,7 +143,7 @@ def load_data(path):
     passage_char_len, question_char_len = [], []
     indices, word_indices = [], []
 
-    with open(path, "rb") as fp:
+    with open(path, "rb", encoding="utf-8") as fp:
         for i, line in enumerate(fp):
             if i == 1000: break
             _data = json.loads(line)
