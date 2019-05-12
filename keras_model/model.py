@@ -30,7 +30,7 @@ class V_net:
                                 dtype="float32", name="question_embedding")
 
         encode_layer = Bidirectional(LSTM(Params.embedding_dim, #recurrent_keep_prob=1-Params.encoder_dropout, 
-                                        return_sequences=True), name="input_encoder")
+                                    return_sequences=True), name="input_encoder")
 
         def split_encoding_layer(embedding):
             return [encode_layer(passages_embedding[:, i, :, :]) for i in range(Params.max_passage_count)]
@@ -38,6 +38,8 @@ class V_net:
             return [passages_embedding[:, i, :, :]  for i in range(Params.max_passage_count)]
         def stack_encoding_layer(encodings):
             return tf.stack(encodings, axis=1)
+
+
 
         passage_embedding_list = Lambda(split_layer, name="split")(passages_embedding)
         # passages_encodings = Lambda(lambda x: K.map_fn(encode_layer, x), Lambda(split_layer)(passages_embedding))

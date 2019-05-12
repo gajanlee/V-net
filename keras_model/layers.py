@@ -239,6 +239,8 @@ class SpanEnd(Layer):
         span_end_representation = K.concatenate(
             [merged_context, modeled_passage, passage_weighted_by_predicted_span, multiply1])
 
+        print("span end shape", span_end_representation)
+
         span_end_representation = self.bilstm_1(span_end_representation)
 
         span_end_input = K.concatenate([merged_context, span_end_representation])
