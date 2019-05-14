@@ -22,8 +22,6 @@ class SpanBegin(Layer):
         super(SpanBegin, self).build(input_shape)
 
     def call(self, span_begin_input):
-        print(span_begin_input)
-        # span_begin_input = K.concatenate([merged_context, modeled_passage])
         span_begin_weights = TimeDistributed(self.dense_1)(span_begin_input)
         span_begin_probabilities = Softmax()(K.squeeze(span_begin_weights, axis=-1))
         return span_begin_probabilities
@@ -75,6 +73,11 @@ def span_end_representation(inputs):
 
 SpanEndRepresentation = Lambda(span_end_representation, name="span_end_representation")
 
+def combineOutput(inputs):
+    span_start_probabilities, span_end_probabilities = inputs
+    return K.stack([span_start_probabilities, span_end_probabilities], axis=-2)
+
+CombineOutput = Lambda(combineOutput, name="combineSpanProbability")
 
 class ContentIndice(Layer):
     
@@ -84,7 +87,7 @@ class ContentIndice(Layer):
     def build(self, input_shape):
         self.dense_1 = Dense(Params.embedding_dim, activation="relu")
         self.dense_1.build(input_shape)
-        self.dense_2 = Dense(1, activation="relu")
+        self.dense_2 = Dense(1, activation="linear")
         self.dense_2.build(input_shape[:-1] + (Params.embedding_dim, ))
         self.trainable_weights = self.dense_1.trainable_weights + self.dense_2.trainable_weights
         
@@ -94,8 +97,8 @@ class ContentIndice(Layer):
         passage_representation = self.dense_1(passage_modeling)
         passage_representation = self.dense_2(passage_representation)
         passage_representation = K.squeeze(passage_representation, axis=-1)
-        passage_indices = Softmax(axis=-1)(passage_representation)
-        return passage_indices
+        # passage_indices = Softmax(axis=-1)(passage_representation)
+        return passage_representation
     
     def compute_output_shape(self, input_shape):
         return input_shape[:-1]
