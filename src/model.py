@@ -23,9 +23,9 @@ class Vnet:
         question_encoding = encode_layer(question_embedding)
         # shape: (None, Params.max_passage_count, Params.max_passage_len, 2*Params.embedding_dim)
         passage_encoding = TimeDistributed(encode_layer, name="passage_encoding")(passages_embedding)
-        # shape: (None, Params.max_passage_count, Params.max_passage_len, 8*Params.embedding_dim)
-        passage_context = Concatenate([passage_encoding, passage_encoding, passage_encoding, passage_encoding])
-        # passage_context = TimeDistributed(ContextEncoding(question_encoding), name="passage_context")(passage_encoding)
+        shape: (None, Params.max_passage_count, Params.max_passage_len, 8*Params.embedding_dim)
+        # passage_context = Concatenate([passage_encoding, passage_encoding, passage_encoding, passage_encoding])
+        passage_context = TimeDistributed(ContextEncoding(question_encoding), name="passage_context")(passage_encoding)
         model_passage_layer = Bidirectional(LSTM(Params.embedding_dim, recurrent_dropout=0.2, 
                                                 return_sequences=True), name="passage_modeling")
         

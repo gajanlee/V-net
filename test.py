@@ -123,7 +123,6 @@ class BatchGenerator(Sequence):
                     batch_i += 1
                     if batch_i == self.batch_size: break
             
-        print(batch_answer_indice)
 
         return [batch_passages, batch_question], [batch_spans, batch_content_indices, batch_answer_indice]
         
