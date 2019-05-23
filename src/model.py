@@ -1,11 +1,11 @@
 import keras.backend as K
-from keras.layers import Bidirectional, LSTM, Input, Embedding, Lambda, Flatten, Dense, Softmax, TimeDistributed
+from keras.layers import Bidirectional, LSTM, Input, Embedding, Lambda, Flatten, Dense, Softmax, TimeDistributed, RepeatVector
 from keras.activations import sigmoid, relu
 from keras.optimizers import Adam
 from keras.models import Model
-from layers import *
-from params import Params
-from loss_functions import *
+from .layers import *
+from .params import Params
+from .loss_functions import *
 
 
 
@@ -24,7 +24,8 @@ class Vnet:
         # shape: (None, Params.max_passage_count, Params.max_passage_len, 2*Params.embedding_dim)
         passage_encoding = TimeDistributed(encode_layer, name="passage_encoding")(passages_embedding)
         # shape: (None, Params.max_passage_count, Params.max_passage_len, 8*Params.embedding_dim)
-        passage_context = TimeDistributed(ContextEncoding(question_encoding))(passage_encoding)
+        passage_context = Concatenate([passage_encoding, passage_encoding, passage_encoding, passage_encoding])
+        # passage_context = TimeDistributed(ContextEncoding(question_encoding), name="passage_context")(passage_encoding)
         model_passage_layer = Bidirectional(LSTM(Params.embedding_dim, recurrent_dropout=0.2, 
                                                 return_sequences=True), name="passage_modeling")
         
@@ -50,11 +51,13 @@ class Vnet:
         # shape: (None, max_passage_count)
         answer_probability = AnswerProbability(name="answer_probability")(answer_encoding)
         
-        model = Model(inputs=[question_embedding, passages_embedding], 
+        model = Model(inputs=[passages_embedding, question_embedding], 
                     outputs=[span_probabilities, content_indices, answer_probability])
 
         model.compile(optimizer = Adam(0.001),
                     loss=[boundary_loss, content_loss, verify_loss])
         model.summary()
 
-Vnet()
+        self.model = model
+
+#Vnet()

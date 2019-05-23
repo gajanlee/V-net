@@ -2,6 +2,11 @@ import nltk
 
 from rouge import Rouge
 
+
+def padding_sequence(sentence, length=200, padding="<padding>"):
+    sentence = sentence[:length]
+    return sentence + [padding]*(length-len(sentence))
+
 _rouge = Rouge()
 def rouge_score(s1, s2):
     return 0 if not s1 or not s2 else _rouge.calc_score([s1], [s2])
@@ -16,7 +21,9 @@ def get_fake_answer_json(text, ref_answer):
     """
     tokened_text, tokened_answer = [nltk.word_tokenize(t) for t in [text, ref_answer]]
     spans = _get_answer_spans(tokened_text, tokened_answer)
-    return {
+    return (tokened_text, spans, tokened_text[spans[0]: spans[1]+1])
+    
+    {
         "document": tokened_text,
         "answer_spans": spans,
         # answer_spans doesn't include the upper boundary.

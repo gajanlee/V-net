@@ -1,12 +1,32 @@
 import keras.backend as K
 from keras.engine.topology import Layer
 from keras.layers import Dense, Softmax, TimeDistributed, Lambda
-from params import Params
-
+#from .params import Params
+class Params:
+    max_passage_count = 5
+    embedding_dim = 200
+    max_passage_len = 200
+    max_question_len = 60
+    
+embedding_dim = 200
 
 def concat(inputs):
     return K.concatenate(inputs)
 Concatenate = Lambda(concat, name="concat")
+
+
+
+
+class Similarity:
+
+    def __init__(self, **kwargs):
+        super(Similarity, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        pass
+
+
+
 
 
 class SpanBegin(Layer):
@@ -41,7 +61,7 @@ class SpanEnd(Layer):
         super(SpanEnd, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        input_shape_dense_1 = input_shape[:-1] + (Params.embedding_dim*10, )
+        input_shape_dense_1 = input_shape[:-1] + (embedding_dim*10, )
         self.dense_1 = Dense(units=1)
         self.dense_1.build(input_shape_dense_1)
         self.trainable_weights = self.dense_1.trainable_weights
@@ -85,10 +105,10 @@ class ContentIndice(Layer):
         super(ContentIndice, self).__init__(**kwargs)
         
     def build(self, input_shape):
-        self.dense_1 = Dense(Params.embedding_dim, activation="relu")
+        self.dense_1 = Dense(embedding_dim, activation="relu")
         self.dense_1.build(input_shape)
         self.dense_2 = Dense(1, activation="linear")
-        self.dense_2.build(input_shape[:-1] + (Params.embedding_dim, ))
+        self.dense_2.build(input_shape[:-1] + (embedding_dim, ))
         self.trainable_weights = self.dense_1.trainable_weights + self.dense_2.trainable_weights
         
         super(ContentIndice, self).build(input_shape)
@@ -137,11 +157,13 @@ class AnswerProbability(Layer):
         score_matrix = Softmax(axis=-1)(score_matrix)
         answer_encoding_hat = K.squeeze(K.dot(score_matrix, answer_encoding), axis=-2)
         answer_encoding_final = K.concatenate([answer_encoding, answer_encoding_hat, answer_encoding*answer_encoding_hat])
-        answer_probability = Dense(1)(answer_encoding_final);
+        answer_probability = self.dense_1(answer_encoding_final);
         answer_probability = Softmax(axis=-1)(answer_probability)
         answer_probability = K.squeeze(answer_probability, axis=-1)
         return answer_probability
 
+    def compute_output_shape(self, input_shape):
+        return (None, input_shape[1])
 
 
 class ContextEncoding(Layer):
@@ -163,6 +185,7 @@ class ContextEncoding(Layer):
 
     def call(self, passage_encoding):
         question_encoding = self.question_encoding
+
         # question_encoding, passage_encoding = input
         score_matrix = K.squeeze(K.dot(passage_encoding, K.permute_dimensions(self.question_encoding, (0, 2, 1))), axis=-1)
 
@@ -176,7 +199,7 @@ class ContextEncoding(Layer):
         return merged_context
     
     def compute_output_shape(self, input_shape):
-        return (None, input_shape[1], 8 * Params.embedding_dim)
+        return (None, input_shape[1], 8 * embedding_dim)
 
     def get_config(self):
         config = super().get_config()
