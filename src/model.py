@@ -1,11 +1,12 @@
 import keras.backend as K
 from keras.layers import Bidirectional, LSTM, Input, Embedding, Lambda, Flatten, Dense, Softmax, TimeDistributed, RepeatVector
 from keras.activations import sigmoid, relu
-from keras.optimizers import Adam
+from keras.optimizers import Adam, SGD
 from keras.models import Model
 from .layers import *
 from .params import Params
 from .loss_functions import *
+
 
 
 
@@ -21,18 +22,29 @@ class Vnet:
                                     return_sequences=True), name="input_encoder")
 
         question_encoding = encode_layer(question_embedding)
+        
         # shape: (None, Params.max_passage_count, Params.max_passage_len, 2*Params.embedding_dim)
         passage_encoding = TimeDistributed(encode_layer, name="passage_encoding")(passages_embedding)
-        shape: (None, Params.max_passage_count, Params.max_passage_len, 8*Params.embedding_dim)
+        # shape: (None, Params.max_passage_count, Params.max_passage_len, 8*Params.embedding_dim)
         # passage_context = Concatenate([passage_encoding, passage_encoding, passage_encoding, passage_encoding])
-        passage_context = TimeDistributed(ContextEncoding(question_encoding), name="passage_context")(passage_encoding)
+        #ce = ContextEncoding(question_encoding)
+        #temp_question_encoding = RepeatVector(Params.max_passage_count)(question_encoding)
+
+        def repeat(x):
+            x = K.expand_dims(x, axis=1)
+            x = K.tile(x, [1, Params.max_passage_count, 1, 1])
+            return x
+
+        temp_question_encoding = Lambda(repeat)(question_encoding)
+        temp_passage_encoding = Lambda(lambda i: K.concatenate(i, axis=-2))([passage_encoding, temp_question_encoding])
+        passage_context = TimeDistributed(ContextEncoding(), name="passage_context")(temp_passage_encoding)
         model_passage_layer = Bidirectional(LSTM(Params.embedding_dim, recurrent_dropout=0.2, 
                                                 return_sequences=True), name="passage_modeling")
         
         # shape: (None, Params.max_passag_count, Params.max_passage_len, 2*Params.embedding_dim)
         passage_modeling = TimeDistributed(model_passage_layer, name="passage_modeling")(passage_context)
 
-        # shape: (NOne, Params.max_passage_count, Params.max_passage_len)
+        # shape: (None, Params.max_passage_count, Params.max_passage_len)
         span_begin_probabilities = TimeDistributed(SpanBegin(name='span_begin'))(Concatenate([passage_context, passage_modeling]))
 
         span_end_representation = SpanEndRepresentation([passage_context, passage_modeling, span_begin_probabilities])
@@ -52,10 +64,11 @@ class Vnet:
         answer_probability = AnswerProbability(name="answer_probability")(answer_encoding)
         
         model = Model(inputs=[passages_embedding, question_embedding], 
+                    #outputs=[span_probabilities, content_indices, answer_probability])
                     outputs=[span_probabilities, content_indices, answer_probability])
-
-        model.compile(optimizer = Adam(0.001),
-                    loss=[boundary_loss, content_loss, verify_loss])
+        model.compile(optimizer = SGD(lr=0.01, decay=1e-3, momentum=0.9, nesterov=True),
+                    loss=[boundary_loss, content_loss, verify_loss],)
+                    # loss=[boundary_loss, content_loss, "categorical_crossentropy"])
         model.summary()
 
         self.model = model

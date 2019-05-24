@@ -26,7 +26,7 @@ def boundary_loss(y_true, y_pred):
         passages_losses = K.map_fn(boundary_loss_per_passage, (y_true, y_pred_start, y_pred_end), dtype="float32")
         return K.mean(passages_losses)
     
-    y_true = K.squeeze(y_true, axis=-1)
+    y_true = K.squeeze(y_true, axis=-2)
     batch_probability_sum = K.map_fn(boundary_loss_passages, (y_true, y_pred), dtype='float32')
     return -K.mean(batch_probability_sum, axis=0)
 
@@ -47,9 +47,7 @@ def content_loss(y_true, y_pred):
 
 
 def verify_loss(y_true, y_pred):
-    print(y_true, y_pred)
     batch_losses = K.sum(y_true * K.log(y_pred), axis=-1)
     #batch_losses = K.expand_dims(batch_losses, axis=-1)
     # batch_losses = K.map_fn(loss_per_batch, (y_true, y_pred), dtype="float32")
     return -K.mean(batch_losses, axis=-1)
-    

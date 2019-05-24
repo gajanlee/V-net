@@ -1,6 +1,9 @@
 import keras.backend as K
 from keras.engine.topology import Layer
 from keras.layers import Dense, Softmax, TimeDistributed, Lambda
+
+import tensorflow as tf
+
 #from .params import Params
 class Params:
     max_passage_count = 5
@@ -26,9 +29,6 @@ class Similarity:
         pass
 
 
-
-
-
 class SpanBegin(Layer):
     
     def __init__(self, **kwargs):
@@ -37,7 +37,7 @@ class SpanBegin(Layer):
     def build(self, input_shape):
         # input_shape: (None, 200, embeddim*8+embeddim*2)
         self.dense_1 = Dense(units=1)
-        self.dense_1.build(input_shape)
+        self.dense_1.build((input_shape[0], input_shape[-1]))
         self.trainable_weights = self.dense_1.trainable_weights
         super(SpanBegin, self).build(input_shape)
 
@@ -54,14 +54,13 @@ class SpanBegin(Layer):
         return config
 
 
-
 class SpanEnd(Layer):
     
     def __init__(self, **kwargs):
         super(SpanEnd, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        input_shape_dense_1 = input_shape[:-1] + (embedding_dim*10, )
+        input_shape_dense_1 = (input_shape[0], embedding_dim*10)
         self.dense_1 = Dense(units=1)
         self.dense_1.build(input_shape_dense_1)
         self.trainable_weights = self.dense_1.trainable_weights
@@ -151,27 +150,34 @@ class AnswerProbability(Layer):
         super(AnswerProbability, self).build(input_shape)
     
     def call(self, answer_encoding):
-        score_matrix = K.squeeze(K.dot(answer_encoding, K.permute_dimensions(answer_encoding, (0, 2, 1))), axis=-2)
+        score_matrix = tf.matmul(answer_encoding, K.permute_dimensions(answer_encoding, (0, 2, 1)))
         eye1 = K.eye(Params.max_passage_count); zero1 = K.zeros_like(eye1); mask = K.cast(K.equal(eye1, zero1), dtype="float32")
         score_matrix = score_matrix * mask
         score_matrix = Softmax(axis=-1)(score_matrix)
-        answer_encoding_hat = K.squeeze(K.dot(score_matrix, answer_encoding), axis=-2)
+        answer_encoding_hat = tf.matmul(score_matrix, answer_encoding)
         answer_encoding_final = K.concatenate([answer_encoding, answer_encoding_hat, answer_encoding*answer_encoding_hat])
-        answer_probability = self.dense_1(answer_encoding_final);
-        answer_probability = Softmax(axis=-1)(answer_probability)
+        answer_probability = self.dense_1(answer_encoding_final)
         answer_probability = K.squeeze(answer_probability, axis=-1)
+        answer_probability = Softmax(axis=-1)(answer_probability)
         return answer_probability
 
     def compute_output_shape(self, input_shape):
         return (None, input_shape[1])
 
 
+def slice(x, w1, w2):
+    """ Define a tensor slice function
+    """
+    return x[:, w1:w2, :]
+
+
 class ContextEncoding(Layer):
-    def __init__(self, question_encoding, **kwargs):
-        self.question_encoding = question_encoding
+    def __init__(self, **kwargs):
         super(ContextEncoding, self).__init__(**kwargs)
 
     def build(self, input_shape):
+        batch_size, p_q_words, embed_dim = input_shape
+
         self.c2qAttention = C2QAttention(name="context_to_query_attention")
         self.c2qAttention.build(input_shape[-1:] + ())
         self.q2cAttention =  Q2CAttention(name='query_to_context_attention')
@@ -183,11 +189,12 @@ class ContextEncoding(Layer):
         super(ContextEncoding, self).build(input_shape)
 
 
-    def call(self, passage_encoding):
-        question_encoding = self.question_encoding
+    #def call(self, passage_encoding):
+    def call(self, encodings):
+        passage_encoding = Lambda(slice, arguments={'w1': 0, 'w2': 200})(encodings)
+        question_encoding = Lambda(slice, arguments={'w1': 200, 'w2': 260})(encodings)
 
-        # question_encoding, passage_encoding = input
-        score_matrix = K.squeeze(K.dot(passage_encoding, K.permute_dimensions(self.question_encoding, (0, 2, 1))), axis=-1)
+        score_matrix = tf.matmul(passage_encoding, K.permute_dimensions(question_encoding, (0, 2, 1)))
 
         context_to_query_attention = self.c2qAttention([
                                                     score_matrix, question_encoding])
@@ -199,7 +206,7 @@ class ContextEncoding(Layer):
         return merged_context
     
     def compute_output_shape(self, input_shape):
-        return (None, input_shape[1], 8 * embedding_dim)
+        return (None, Params.max_passage_len, 8 * embedding_dim)
 
     def get_config(self):
         config = super().get_config()

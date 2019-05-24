@@ -30,9 +30,9 @@ def prepare_corpus(path, output):
                 all_selects.append(passage["is_selected"])
 
                 if answer == "No Answer Present.":
-                    all_spans.append([[0], [0]])
+                    all_spans.append([0, 0])
                 else:
-                    all_spans.append([ [spans[0]], [spans[1]] ])
+                    all_spans.append([spans[0], spans[1]])
             
             sample_obj = {
                 "documents": all_tokens,

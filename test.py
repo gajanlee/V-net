@@ -44,7 +44,7 @@ def convert_corpus(input_obj):
     """
     def convert_content_indice(passage, span):
         start_span, end_span = span
-        start_span, end_span = start_span[0], end_span[0]
+        # start_span, end_span = start_span[0], end_span[0]
         return [0]*start_span + [1]*(end_span-start_span) + [0]*(len(passage)-end_span) + [0]*(Params.max_passage_len-len(passage))
     
     passages = input_obj["documents"] #list(map(padding_sequence, input_obj["documents"]))
@@ -84,7 +84,6 @@ class BatchGenerator(Sequence):
     def __getitem__(self, index):
         "Generate one batch of data"
         
-        
         start_index = (index * self.batch_size)
         end_index = ((index+1) * self.batch_size)
 
@@ -92,10 +91,9 @@ class BatchGenerator(Sequence):
         
         batch_passages = np.zeros((self.batch_size, Params.max_passage_count, Params.max_passage_len, Params.embedding_dim))
         batch_question = np.zeros((self.batch_size, Params.max_question_len, Params.embedding_dim))
-        batch_spans = np.zeros((self.batch_size, Params.max_passage_count, 2, 1))
+        batch_spans = np.zeros((self.batch_size, Params.max_passage_count, 2))
         batch_content_indices = np.zeros((self.batch_size, Params.max_passage_count, Params.max_passage_len))
         batch_answer_indice = np.zeros((self.batch_size, Params.max_passage_count))
-
         
         batch_i = 0
         with open(self.input_file, 'r', encoding="utf-8") as inFile:
@@ -114,7 +112,6 @@ class BatchGenerator(Sequence):
                     question_embedding = self.vectors.query(question, pad_to_length=Params.max_question_len)
                     question_len, _ = question_embedding.shape
                     batch_question[batch_i, :question_len, :] = question_embedding
-                    
 
                     batch_spans[batch_i, :passage_count, ] = spans
                     batch_content_indices[batch_i, :passage_count, ] = content_indices
@@ -122,7 +119,12 @@ class BatchGenerator(Sequence):
                     
                     batch_i += 1
                     if batch_i == self.batch_size: break
-            
+        
+        batch_spans = np.expand_dims(np.array(batch_spans, dtype='float32'), axis=-2).clip(0, Params.max_passage_len - 1)
+
+
+        #return [batch_passages, batch_question], [batch_spans, batch_content_indices, batch_answer_indice]
+        print(batch_passages.shape)
 
         return [batch_passages, batch_question], [batch_spans, batch_content_indices, batch_answer_indice]
         
@@ -131,11 +133,25 @@ class BatchGenerator(Sequence):
             np.random.shuffle(self.indices)
 
 
+
+import tensorflow as tf
+from tensorflow.core.protobuf import rewriter_config_pb2
+from tensorflow.keras.backend import set_session
+tf.keras.backend.clear_session()  # For easy reset of notebook state.
+
+config_proto = tf.ConfigProto()
+off = rewriter_config_pb2.RewriterConfig.OFF
+config_proto.graph_options.rewrite_options.arithmetic_optimization = off
+session = tf.Session(config=config_proto)
+set_session(session)
+
+
+
 b = BatchGenerator()
 from src.model import Vnet
 v = Vnet()
-
 m = v.model
+
 
 from tensorflow.python import debug as tf_debug
 import keras.backend as K
